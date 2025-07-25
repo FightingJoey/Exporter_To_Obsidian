@@ -1,5 +1,5 @@
 # 使用官方Go镜像作为构建环境
-FROM golang:1.21-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.21-alpine AS builder
 
 # 设置工作目录
 WORKDIR /app
@@ -30,3 +30,9 @@ COPY --from=builder /app/output /output
 
 # 运行应用
 CMD ["./main"]
+
+# 本地构建
+# docker build -t exporter-to-obsidian:latest .  
+
+# 推送到Docker Hub
+# docker buildx build --platform linux/arm/v7,linux/arm64,linux/amd64 -t username/exporter-to-obsidian:latest --push .
