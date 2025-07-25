@@ -10,6 +10,8 @@ COPY go.mod ./
 # 复制源代码（移动到这里，以便 tidy 可以扫描代码）
 COPY . .
 
+RUN mkdir -p output
+
 # 下载依赖，现在 tidy 可以正确工作
 RUN go mod tidy && go mod download
 
