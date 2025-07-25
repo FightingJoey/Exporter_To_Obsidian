@@ -316,11 +316,6 @@ func exportMemos() error {
 		return fmt.Errorf("导出Memos每日摘要失败: %v", err)
 	}
 
-	// 导出每周摘要
-	// if err := exporter.ExportWeeklySummary(today); err != nil {
-	// 	return fmt.Errorf("导出Memos每周摘要失败: %v", err)
-	// }
-
 	fmt.Println("Memos数据导出完成")
 	return nil
 }
@@ -335,9 +330,9 @@ func runExport() {
 	}
 
 	// 导出Memos数据
-	// if err := exportMemos(); err != nil {
-	// 	log.Printf("导出Memos数据失败: %v", err)
-	// }
+	if err := exportMemos(); err != nil {
+		log.Printf("导出Memos数据失败: %v", err)
+	}
 
 	fmt.Println("数据导出完成")
 }
@@ -347,13 +342,13 @@ func main() {
 	godotenv.Load()
 
 	// 创建定时器，每5分钟触发一次
-	// ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(5 * time.Minute)
 
 	// 立即执行第一次导出
 	runExport()
 
 	// 进入无限循环，等待定时器触发
-	// for range ticker.C {
-	// 	runExport()
-	// }
+	for range ticker.C {
+		runExport()
+	}
 }
