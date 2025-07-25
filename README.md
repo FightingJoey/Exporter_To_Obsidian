@@ -12,7 +12,7 @@
   - 生成每日、每周、每月摘要，包括任务和习惯打卡。
 - Memos导出 ：
   - 获取Memos记录。
-  - 生成每日和每周Memos摘要。
+  - 生成每日摘要。
 - 支持Docker部署 ：通过Dockerfile和docker-compose.yml实现容器化部署和定时任务。
 
 ## 安装
@@ -38,7 +38,7 @@
 3. 编译：
    
    ```bash
-   go build -o main cmd/main.go
+   go build -o main ./cmd/main.go
    ```
 
 ## 配置
@@ -54,14 +54,6 @@
   - TASKS_INBOX_PATH ：任务收件箱路径（默认"Inbox"）
 
 ## 使用
-
-### 运行脚本
-
-- 执行 scripts/run.sh ：
-
-  ```bash
-  ./scripts/run.sh
-  ```
 
 ### Docker部署
 
@@ -86,7 +78,6 @@
 - internal/exporter/ ：数据导出逻辑
 - internal/types/ ：数据类型定义
 - internal/utils/ ：工具函数
-- scripts/run.sh ：运行脚本
 - Dockerfile ：Docker镜像定义
 - docker-compose.yml ：容器编排
 
