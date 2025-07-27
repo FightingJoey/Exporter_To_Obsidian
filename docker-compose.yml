@@ -2,10 +2,10 @@ version: '3.8'
 
 services:
   exporter-to-obsidian:
-    image: geselle/exporter-to-obsidian:latest
+    image: exporter-to-obsidian:latest
     container_name: exporter-to-obsidian
     volumes:
-      - /Users/joy/Documents/SecondBrain:/output
+      - ./output:/output
     env_file:
       - .env.production
     restart: unless-stopped
