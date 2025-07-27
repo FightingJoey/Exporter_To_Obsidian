@@ -826,14 +826,14 @@ func (e *Dida365Exporter) ExportMonthlySummary(date time.Time) error {
 				// 按优先级排序
 				sort.Slice(weekTasks, func(i, j int) bool {
 					priI := 0
-					if weekTasks[i].Priority != nil {
-						priI = *weekTasks[i].Priority
+					if weekTasks[i].ProcessedDueDate != nil {
+						priI = int(weekTasks[i].ProcessedDueDate.Unix())
 					}
 					priJ := 0
-					if weekTasks[j].Priority != nil {
-						priJ = *weekTasks[j].Priority
+					if weekTasks[j].ProcessedDueDate != nil {
+						priJ = int(weekTasks[j].ProcessedDueDate.Unix())
 					}
-					return priI > priJ
+					return priI < priJ
 				})
 
 				for _, task := range weekTasks {
