@@ -341,6 +341,9 @@ func main() {
 	// 加载环境变量
 	godotenv.Load()
 
+	fmt.Println("当前时区:", time.Local.String()) // 应输出 CST
+    fmt.Println("当前时间:", time.Now())
+
 	// 创建定时器，每5分钟触发一次
 	ticker := time.NewTicker(5 * time.Minute)
 

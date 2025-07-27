@@ -16,9 +16,9 @@ RUN mkdir -p output
 RUN go mod tidy && go mod download
 
 # 构建应用
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/main.go
+# RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/main.go
 # 构建armv7版本
-# RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -o main ./cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -o main ./cmd/main.go
 
 # 使用轻量级的alpine镜像作为运行环境
 FROM scratch
@@ -29,6 +29,10 @@ WORKDIR /app
 # 从构建阶段复制二进制文件
 COPY --from=builder /app/main .
 COPY --from=builder /app/output /output
+
+# 复制时区信息
+COPY ./usr/share/zoneinfo /usr/share/zoneinfo
+ENV TZ=Asia/Shanghai
 
 # 运行应用
 CMD ["./main"]
