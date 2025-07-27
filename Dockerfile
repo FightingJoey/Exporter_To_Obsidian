@@ -17,6 +17,8 @@ RUN go mod tidy && go mod download
 
 # 构建应用
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/main.go
+# 构建armv7版本
+# RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -o main ./cmd/main.go
 
 # 使用轻量级的alpine镜像作为运行环境
 FROM scratch
@@ -35,4 +37,7 @@ CMD ["./main"]
 # docker build -t exporter-to-obsidian:latest .  
 
 # 推送到Docker Hub
-# docker buildx build --platform linux/arm/v7,linux/arm64,linux/amd64 -t username/exporter-to-obsidian:latest --push .
+# docker buildx build --platform linux/arm64,linux/amd64 -t username/exporter-to-obsidian:latest --push .
+
+# 推送armv7版本
+# docker buildx build --platform linux/arm/v7 -t username/exporter-to-obsidian:armv7 --push .

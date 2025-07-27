@@ -2,16 +2,13 @@ version: '3.8'
 
 services:
   exporter-to-obsidian:
-    image: exporter-to-obsidian:latest
+    image: geselle/exporter-to-obsidian:latest
     container_name: exporter-to-obsidian
     volumes:
-      - ./output:/output
+      - /Users/joy/Documents/SecondBrain:/output
     env_file:
       - .env.production
     restart: unless-stopped
-    environment:
-      - TZ=Asia/Shanghai
-      - OUTPUT_DIR=/output
 
 # 使用说明：
 # 1. 准备 .env.production 文件，包含必要的环境变量
