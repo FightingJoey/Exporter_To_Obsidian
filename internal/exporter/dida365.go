@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 	"time"
+	"regexp"
 
 	"exporter-to-obsidian/internal/types"
 	"exporter-to-obsidian/internal/utils"
@@ -133,6 +134,25 @@ func (e *Dida365Exporter) getProjectTasks(projectID string, tasks []types.Task) 
 	}
 	return projectTasks
 }
+func (e *Dida365Exporter) convertImageURLs(content, projectID, taskID string) string {
+	// 正则匹配图片格式：![image](<attachment_id>/<filename>)
+	re := regexp.MustCompile(`!\[image]\(([0-9a-f]+)/([^\)]+)\)`)
+	
+	// 替换为指定URL格式
+	return re.ReplaceAllStringFunc(content, func(match string) string {
+		parts := re.FindStringSubmatch(match)
+		if len(parts) < 3 {
+			return match // 不符合格式则返回原字符串
+		}
+		
+		attachmentID := parts[1]
+		newURL := fmt.Sprintf("https://dida365.com/api/v1/attachment/%s/%s/%s.jpg", 
+			projectID, taskID, attachmentID)
+		
+		return fmt.Sprintf("![image](%s)", newURL)
+	})
+}
+
 
 // createTaskMarkdown 为单个任务创建Markdown文件
 func (e *Dida365Exporter) createTaskMarkdown(task types.Task, taskMap map[string]types.Task) error {
@@ -163,11 +183,13 @@ func (e *Dida365Exporter) createTaskMarkdown(task types.Task, taskMap map[string
 
 	// 添加任务描述
 	if task.Content != nil && *task.Content != "" {
-		content += fmt.Sprintf("%s\n\n", *task.Content)
+		convertedContent := e.convertImageURLs(*task.Content, *task.ProjectID, *task.ID)
+		content += fmt.Sprintf("%s\n\n", convertedContent)
 	}
 
 	if task.Desc != nil && *task.Desc != "" {
-		content += fmt.Sprintf("%s\n\n", *task.Desc)
+		convertedContent := e.convertImageURLs(*task.Desc, *task.ProjectID, *task.ID)
+		content += fmt.Sprintf("%s\n\n", convertedContent)
 	}
 
 	// 添加任务列表
