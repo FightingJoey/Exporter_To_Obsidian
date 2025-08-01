@@ -86,6 +86,7 @@ type Task struct {
 	Desc          *string    `json:"desc,omitempty"`
 	ChildIDs      []string   `json:"childIds,omitempty"`
 	ParentID      *string    `json:"parentId,omitempty"`
+	ColumnID      *string    `json:"columnId,omitempty"` // 添加列ID字段
 	// 预处理后的时间字段
 	ProcessedStartDate *time.Time `json:"-"`
 	ProcessedDueDate   *time.Time `json:"-"`

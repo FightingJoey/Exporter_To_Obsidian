@@ -243,6 +243,9 @@ func parseTaskFromMap(taskMap map[string]interface{}) types.Task {
 	if kind, ok := taskMap["kind"].(string); ok {
 		task.Kind = &kind
 	}
+	if columnID, ok := taskMap["columnId"].(string); ok {
+		task.ColumnID = &columnID
+	}
 
 	// 解析任务项
 	if items, ok := taskMap["items"].([]interface{}); ok {

@@ -271,7 +271,7 @@ func (e *Dida365Exporter) createTaskMarkdown(task types.Task, taskMap map[string
 		return fmt.Errorf("写入任务文件失败: %v", err)
 	}
 
-	fmt.Printf("已创建任务文件: %s\n", filename)
+	// fmt.Printf("已创建任务文件: %s\n", filename)
 	return nil
 }
 
@@ -343,47 +343,75 @@ func (e *Dida365Exporter) getProjectIndexContent(project types.Project, tasks []
 	content := fmt.Sprintf("## %s\n\n", project.Name)
 
 	if len(tasks) > 0 {
-		// 按优先级排序
-		sort.Slice(tasks, func(i, j int) bool {
-			priI := 0
-			if tasks[i].Priority != nil {
-				priI = *tasks[i].Priority
-			}
-			priJ := 0
-			if tasks[j].Priority != nil {
-				priJ = *tasks[j].Priority
-			}
-			if priI != priJ {
-				return priI > priJ
-			}
-			// 如果优先级相同，按创建时间排序
-			createdI := ""
-			if tasks[i].CreatedTime != nil {
-				createdI = *tasks[i].CreatedTime
-			}
-			createdJ := ""
-			if tasks[j].CreatedTime != nil {
-				createdJ = *tasks[j].CreatedTime
-			}
-			return createdI < createdJ
-		})
-
+		// 创建列映射，将任务按列分组
+		columnTasks := make(map[string][]types.Task)
+		
+		// 按列ID分组任务
 		for _, task := range tasks {
-			priorityMark := utils.GetPriorityMark(task.Priority)
-			timeRange := e.formatTaskTimeRange(task)
-			title := ""
-			if task.Title != nil {
-				title = *task.Title
+			if task.ColumnID != nil && *task.ColumnID != "" {
+				columnTasks[*task.ColumnID] = append(columnTasks[*task.ColumnID], task)
 			}
-			id := ""
-			if task.ID != nil {
-				id = *task.ID
-			}
-
-			if timeRange == "" {
-				content += fmt.Sprintf("- [ ] [[%s|%s]] | %s\n", id, title, priorityMark)
-			} else {
-				content += fmt.Sprintf("- [ ] [[%s|%s]] | %s | %s\n", id, title, priorityMark, timeRange)
+		}
+		
+		// 创建列ID到列名称的映射
+		columnNameMap := make(map[string]string)
+		for _, column := range project.Columns {
+			columnNameMap[column.ID] = column.Name
+		}
+		
+		// 按列显示任务
+		// 首先显示有列的任务
+		for _, column := range project.Columns {
+			tasksInColumn := columnTasks[column.ID]
+			if len(tasksInColumn) > 0 {
+				// 显示列标题
+				content += fmt.Sprintf("### %s\n\n", column.Name)
+				
+				// 对列内的任务按优先级排序
+				sort.Slice(tasksInColumn, func(i, j int) bool {
+					priI := 0
+					if tasksInColumn[i].Priority != nil {
+						priI = *tasksInColumn[i].Priority
+					}
+					priJ := 0
+					if tasksInColumn[j].Priority != nil {
+						priJ = *tasksInColumn[j].Priority
+					}
+					if priI != priJ {
+						return priI > priJ
+					}
+					// 如果优先级相同，按创建时间排序
+					createdI := ""
+					if tasksInColumn[i].CreatedTime != nil {
+						createdI = *tasksInColumn[i].CreatedTime
+					}
+					createdJ := ""
+					if tasksInColumn[j].CreatedTime != nil {
+						createdJ = *tasksInColumn[j].CreatedTime
+					}
+					return createdI < createdJ
+				})
+				
+				// 显示任务列表
+				for _, task := range tasksInColumn {
+					priorityMark := utils.GetPriorityMark(task.Priority)
+					timeRange := e.formatTaskTimeRange(task)
+					title := ""
+					if task.Title != nil {
+						title = *task.Title
+					}
+					id := ""
+					if task.ID != nil {
+						id = *task.ID
+					}
+					
+					if timeRange == "" {
+						content += fmt.Sprintf("- [ ] [[%s|%s]] | %s\n", id, title, priorityMark)
+					} else {
+						content += fmt.Sprintf("- [ ] [[%s|%s]] | %s | %s\n", id, title, priorityMark, timeRange)
+					}
+				}
+				content += "\n"
 			}
 		}
 	}
