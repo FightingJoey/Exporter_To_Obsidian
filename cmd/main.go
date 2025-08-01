@@ -356,6 +356,16 @@ func exportDida365() error {
 		return fmt.Errorf("导出项目任务失败: %v", err)
 	}
 
+	// 导出笔记
+	if err := exporter.ExportNotes(); err != nil {
+		return fmt.Errorf("导出笔记失败: %v", err)
+	}
+
+	// 导出分组
+	if err := exporter.ExportColumns(); err != nil {
+		return fmt.Errorf("导出分组失败: %v", err)
+	}
+
 	// 导出每日摘要
 	today := time.Now()
 	if err := exporter.ExportDailySummary(today, habits, checkins, todayStamp); err != nil {

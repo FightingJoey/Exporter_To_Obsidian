@@ -28,6 +28,8 @@ type Dida365Exporter struct {
 	tasksDir       string
 	tasksInboxDir  string
 	tasksInboxPath string
+	notesDir       string
+	columnsDir     string
 }
 
 // NewDida365Exporter 创建新的滴答清单导出器
@@ -43,6 +45,8 @@ func NewDida365Exporter(projects []types.Project, todoTasks, completedTasks []ty
 	calendarDir := filepath.Join(outputDir, utils.GetEnvOrDefault("CALENDAR_DIR", "Calendar"))
 	tasksDir := filepath.Join(outputDir, utils.GetEnvOrDefault("TASKS_DIR", "Tasks"))
 	tasksInboxDir := filepath.Join(outputDir, utils.GetEnvOrDefault("TASKS_INBOX_PATH", "Inbox"))
+	notesDir := filepath.Join(outputDir, utils.GetEnvOrDefault("NOTES_DIR", "Notes"))
+	columnsDir := filepath.Join(outputDir, utils.GetEnvOrDefault("COLUMNS_DIR", "Columns"))
 
 	exporter := &Dida365Exporter{
 		projects:       projects,
@@ -59,6 +63,8 @@ func NewDida365Exporter(projects []types.Project, todoTasks, completedTasks []ty
 		tasksDir:       tasksDir,
 		tasksInboxDir:  tasksInboxDir,
 		tasksInboxPath: filepath.Join(tasksInboxDir, "TasksInbox.md"),
+		notesDir:       notesDir,
+		columnsDir:     columnsDir,
 	}
 
 	// 确保所有目录存在
@@ -69,6 +75,8 @@ func NewDida365Exporter(projects []types.Project, todoTasks, completedTasks []ty
 		exporter.monthlyDir,
 		exporter.tasksDir,
 		exporter.tasksInboxDir,
+		exporter.notesDir,
+		exporter.columnsDir,
 	}
 
 	for _, dir := range dirs {
@@ -78,6 +86,117 @@ func NewDida365Exporter(projects []types.Project, todoTasks, completedTasks []ty
 	}
 
 	return exporter
+}
+
+func (e *Dida365Exporter) ExportNotes() error {
+	// 为每个笔记创建Markdown文件
+	for _, note := range e.notes {
+		if err := e.createNoteMarkdown(note); err != nil {
+			fmt.Printf("创建笔记文件失败: %v\n", err)
+			return fmt.Errorf("创建笔记文件失败: %v", err)
+		}
+	}
+	return nil
+}
+
+func (e *Dida365Exporter) createNoteMarkdown(task types.Task) error {
+	if task.ID == nil {
+		return fmt.Errorf("笔记ID为空")
+	}
+
+	filename := fmt.Sprintf("%s.md", *task.ID)
+	filepath := filepath.Join(e.notesDir, filename)
+
+	// 检查文件是否需要更新
+	if e.shouldSkipFile(filepath, task) {
+		// fmt.Printf("笔记文件已是最新: %s\n", filename)
+		return nil
+	}
+
+	// 准备Front Matter
+	frontMatter := e.buildTaskFrontMatter(task)
+
+	// 构建文件内容
+	content := "---\n"
+	for key, value := range frontMatter {
+		if value != nil {
+			content += fmt.Sprintf("%s: %v\n", key, value)
+		}
+	}
+	content += "---\n\n"
+
+	// 添加任务描述
+	if task.Content != nil && *task.Content != "" {
+		convertedContent := e.convertImageURLs(*task.Content, *task.ProjectID, *task.ID)
+		content += fmt.Sprintf("%s\n\n", convertedContent)
+	}
+
+	// 删除旧文件并写入新文件
+	if _, err := os.Stat(filepath); err == nil {
+		os.Remove(filepath)
+		fmt.Printf("删除旧文件: %s\n", filename)
+	}
+
+	if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("写入笔记文件失败: %v", err)
+	}
+	return nil
+}
+
+func (e *Dida365Exporter) ExportColumns() error {
+	// 为每个分组创建Markdown文件
+	for _, column := range e.all_columns {
+		if err := e.createColumnMarkdown(column); err != nil {
+			fmt.Printf("创建分组文件失败: %v\n", err)
+			return fmt.Errorf("创建分组文件失败: %v", err)
+		}
+	}
+	return nil
+}
+
+func (e *Dida365Exporter) createColumnMarkdown(column types.Column) error {
+	if column.ID == nil {
+		return fmt.Errorf("分组ID为空")
+	}
+
+	filename := fmt.Sprintf("%s.md", *column.ID)
+	filepath := filepath.Join(e.columnsDir, filename)
+
+	frontMatter := make(map[string]interface{})
+	if column.Name != nil {
+		frontMatter["title"] = *column.Name
+	}
+	if column.ID != nil {
+		frontMatter["column_id"] = *column.ID
+	}
+	if column.ProjectID != nil {
+		frontMatter["project_id"] = *column.ProjectID
+	}
+	if column.CreatedTime != nil {
+		frontMatter["created_time"] = utils.FormatTime(*column.CreatedTime, "2006-01-02 15:04:05")
+	}
+	if column.ModifiedTime != nil {
+		frontMatter["modified_time"] = utils.FormatTime(*column.ModifiedTime, "2006-01-02 15:04:05")
+	}
+
+	content := "---\n"
+	for key, value := range frontMatter {
+		if value != nil {
+			content += fmt.Sprintf("%s: %v\n", key, value)
+		}
+	}
+	content += "---\n\n"
+
+	if _, err := os.Stat(filepath); err == nil {
+		os.Remove(filepath)
+		fmt.Printf("删除旧文件: %s\n", filename)
+	}
+
+	if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("写入分组文件失败: %v", err)
+	}
+
+	return nil
 }
 
 // ExportProjectTasks 导出所有项目的任务
@@ -194,7 +313,7 @@ func (e *Dida365Exporter) createTaskMarkdown(task types.Task, taskMap map[string
 	filepath := filepath.Join(e.tasksDir, filename)
 
 	// 检查文件是否需要更新
-	if e.shouldSkipTaskFile(filepath, task) {
+	if e.shouldSkipFile(filepath, task) {
 		// fmt.Printf("任务文件已是最新: %s\n", filename)
 		return nil
 	}
@@ -246,6 +365,8 @@ func (e *Dida365Exporter) createTaskMarkdown(task types.Task, taskMap map[string
 		for _, childID := range task.ChildIDs {
 			if childTask, exists := taskMap[childID]; exists {
 				content += e.createTaskTableContent(childTask)
+			} else {
+				content += fmt.Sprintf("| %s | %s | %s | %s | %s |\n", childID, "", "", "", "")
 			}
 		}
 		content += "\n"
@@ -257,6 +378,8 @@ func (e *Dida365Exporter) createTaskMarkdown(task types.Task, taskMap map[string
 		content += e.createTableHeader()
 		if parentTask, exists := taskMap[*task.ParentID]; exists {
 			content += e.createTaskTableContent(parentTask)
+		} else {
+			content += fmt.Sprintf("| %s | %s | %s | %s | %s |\n", *task.ParentID, "", "", "", "")
 		}
 		content += "\n"
 	}
@@ -275,8 +398,8 @@ func (e *Dida365Exporter) createTaskMarkdown(task types.Task, taskMap map[string
 	return nil
 }
 
-// shouldSkipTaskFile 检查是否应该跳过任务文件创建
-func (e *Dida365Exporter) shouldSkipTaskFile(filepath string, task types.Task) bool {
+// shouldSkipFile 检查是否应该跳过任务文件创建
+func (e *Dida365Exporter) shouldSkipFile(filepath string, task types.Task) bool {
 	if _, err := os.Stat(filepath); os.IsNotExist(err) {
 		return false
 	}
@@ -332,7 +455,7 @@ func (e *Dida365Exporter) buildTaskFrontMatter(task types.Task) map[string]inter
 		frontMatter["modified_time"] = utils.FormatTime(*task.ModifiedTime, "2006-01-02 15:04:05")
 	}
 	if task.CompletedTime != nil {
-		frontMatter["completedTime"] = utils.FormatTime(*task.CompletedTime, "2006-01-02 15:04:05")
+		frontMatter["completed_time"] = utils.FormatTime(*task.CompletedTime, "2006-01-02 15:04:05")
 	}
 
 	return frontMatter
@@ -356,16 +479,17 @@ func (e *Dida365Exporter) getProjectIndexContent(project types.Project, tasks []
 		// 创建列ID到列名称的映射
 		columnNameMap := make(map[string]string)
 		for _, column := range project.Columns {
-			columnNameMap[column.ID] = column.Name
+			columnNameMap[*column.ID] = *column.Name
 		}
 		
 		// 按列显示任务
 		// 首先显示有列的任务
 		for _, column := range project.Columns {
-			tasksInColumn := columnTasks[column.ID]
+			tasksInColumn := columnTasks[*column.ID]
 			if len(tasksInColumn) > 0 {
 				// 显示列标题
-				content += fmt.Sprintf("### %s\n\n", column.Name)
+				fmt.Printf("列ID: %s, 列名称: %s\n", *column.ID, *column.Name)
+				content += fmt.Sprintf("### %s\n\n", *column.Name)
 				
 				// 对列内的任务按优先级排序
 				sort.Slice(tasksInColumn, func(i, j int) bool {
@@ -412,6 +536,8 @@ func (e *Dida365Exporter) getProjectIndexContent(project types.Project, tasks []
 					}
 				}
 				content += "\n"
+			} else {
+				content += fmt.Sprintf("### %s\n\n", *column.Name)
 			}
 		}
 	}

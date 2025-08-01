@@ -51,9 +51,9 @@ type Project struct {
 
 // Column 表示滴答清单项目中的一个列
 type Column struct {
-	ID           string  `json:"id"`
-	ProjectID    string  `json:"projectId"`
-	Name         string  `json:"name"`
+	ID           *string  `json:"id"`
+	ProjectID    *string  `json:"projectId"`
+	Name         *string  `json:"name"`
 	SortOrder    *int64  `json:"sortOrder,omitempty"`
 	CreatedTime  *string `json:"createdTime,omitempty"`
 	ModifiedTime *string `json:"modifiedTime,omitempty"`
