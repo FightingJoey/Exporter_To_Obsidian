@@ -316,3 +316,26 @@ func (c *Dida365Client) GetHabitsCheckins(afterStamp string, habitIDs []string) 
 func (c *Dida365Client) GetInboxID() string {
 	return c.inboxID
 }
+
+// GetProjectColumns 获取项目列信息
+func (c *Dida365Client) GetProjectColumns(projectID string) ([]types.Column, error) {
+	url := fmt.Sprintf("%s/column/project/%s", c.baseURL, projectID)
+	
+	resp, err := c.client.R().
+		Get(url)
+
+	if err != nil {
+		return nil, fmt.Errorf("获取项目列信息失败: %v", err)
+	}
+
+	if resp.StatusCode() != 200 {
+		return nil, fmt.Errorf("获取项目列信息失败，状态码: %d", resp.StatusCode())
+	}
+
+	var columns []types.Column
+	if err := json.Unmarshal(resp.Body(), &columns); err != nil {
+		return nil, fmt.Errorf("解析项目列信息失败: %v", err)
+	}
+
+	return columns, nil
+}

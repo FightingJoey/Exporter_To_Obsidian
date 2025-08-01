@@ -37,20 +37,86 @@ func preprocessTasks(tasks []types.Task) {
 	}
 }
 
+// getProjectColumns 获取项目的 Columns，并将其导出为 Markdown 文档
+func getProjectColumns(client *client.Dida365Client, projectID string) ([]types.Column, error) {
+	// 获取项目列数据
+	columns, err := client.GetProjectColumns(projectID)
+	if err != nil {
+		fmt.Printf("获取项目 %s 列信息失败: %v\n", projectID, err)
+		return nil, err
+	}
+
+	// 创建输出目录
+	// outputDir := utils.GetEnvOrDefault("OUTPUT_DIR", ".")
+	// columnsDir := filepath.Join(outputDir, "Columns")
+	// if err := os.MkdirAll(columnsDir, 0755); err != nil {
+	// 	fmt.Printf("创建目录失败 %s: %v\n", columnsDir, err)
+	// 	return columns, nil
+	// }
+
+	// // 生成Markdown文件
+	// filename := fmt.Sprintf("%s-columns.md", projectID)
+	// filepath := filepath.Join(columnsDir, filename)
+
+	// // 构建Markdown内容
+	// content := fmt.Sprintf("# 项目 %s 的列信息\n\n", projectID)
+	// content += fmt.Sprintf("更新时间: %s\n\n", time.Now().Format("2006-01-02 15:04:05"))
+	// content += "| 列ID | 列名称 | 创建时间 | 修改时间 | 排序 |\n"
+	// content += "|------|--------|----------|----------|------|\n"
+
+	// for _, column := range columns {
+	// 	createdTime := ""
+	// 	if column.CreatedTime != nil {
+	// 		createdTime = utils.FormatTime(*column.CreatedTime, "2006-01-02 15:04:05")
+	// 	}
+
+	// 	modifiedTime := ""
+	// 	if column.ModifiedTime != nil {
+	// 		modifiedTime = utils.FormatTime(*column.ModifiedTime, "2006-01-02 15:04:05")
+	// 	}
+
+	// 	sortOrder := ""
+	// 	if column.SortOrder != nil {
+	// 		sortOrder = fmt.Sprintf("%d", *column.SortOrder)
+	// 	}
+
+	// 	content += fmt.Sprintf("| %s | %s | %s | %s | %s |\n", 
+	// 		column.ID, column.Name, createdTime, modifiedTime, sortOrder)
+	// }
+
+	// // 写入文件
+	// if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
+	// 	fmt.Printf("写入文件失败: %v\n", err)
+	// 	return columns, nil
+	// }
+
+	// fmt.Printf("已导出 %d 个列信息到文件: %s\n", len(columns), filepath)
+	return columns, nil
+}
+
 // getTasks 获取任务数据
-func getTasks(client *client.Dida365Client) ([]types.Project, []types.Task, []types.Task, []types.Project, []types.Task, error) {
+func getTasks(client *client.Dida365Client) ([]types.Project, []types.Task, []types.Task, []types.Project, []types.Task, []types.Column, error) {
 	fmt.Println("正在获取滴答清单数据...")
 
 	// 获取所有数据
 	allData, err := client.GetAllData()
 	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("获取所有数据失败: %v", err)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("获取所有数据失败: %v", err)
 	}
 
 	// 解析项目数据
 	var projects []types.Project
+
 	// 解析笔记项目数据
 	var note_projects []types.Project
+
+	// 解析待办任务数据
+	var todoTasks []types.Task
+
+	// 解析笔记任务数据
+	var notes []types.Task
+
+	var all_columns []types.Column
 
 	if inboxID := client.GetInboxID(); inboxID != "" {
 		inbox := types.Project{}
@@ -65,6 +131,11 @@ func getTasks(client *client.Dida365Client) ([]types.Project, []types.Task, []ty
 				project := types.Project{}
 				if id, ok := projectMap["id"].(string); ok {
 					project.ID = id
+					columns, _ := getProjectColumns(client, id)
+					if columns != nil {
+						all_columns = append(all_columns, columns...)
+						project.Columns = columns
+					}
 				}
 				if name, ok := projectMap["name"].(string); ok {
 					project.Name = name
@@ -81,12 +152,6 @@ func getTasks(client *client.Dida365Client) ([]types.Project, []types.Task, []ty
 			}
 		}
 	}
-
-	// 解析待办任务数据
-	var todoTasks []types.Task
-
-	// 解析笔记任务数据
-	var notes []types.Task
 
 	if syncTaskBean, ok := allData["syncTaskBean"].(map[string]interface{}); ok {
 		if tasksData, ok := syncTaskBean["update"].([]interface{}); ok {
@@ -127,10 +192,10 @@ func getTasks(client *client.Dida365Client) ([]types.Project, []types.Task, []ty
 	preprocessTasks(todoTasks)
 	preprocessTasks(completedTasks)
 
-	fmt.Printf("获取到 %d 个项目，%d 个待办任务，%d 个已完成任务，%d 个笔记项目，%d 个笔记\n",
-		len(projects), len(todoTasks), len(completedTasks), len(note_projects), len(notes))
+	fmt.Printf("获取到 %d 个项目，%d 个待办任务，%d 个已完成任务，%d 个笔记项目，%d 个笔记, %d 个分组\n",
+		len(projects), len(todoTasks), len(completedTasks), len(note_projects), len(notes), len(all_columns))
 
-	return projects, todoTasks, completedTasks, note_projects, notes, nil
+	return projects, todoTasks, completedTasks, note_projects, notes, all_columns, nil
 }
 
 // parseTaskFromMap 从map解析任务
@@ -268,13 +333,10 @@ func exportDida365() error {
 	}
 
 	// 获取任务数据
-	projects, todoTasks, completedTasks, note_projects, notes, err := getTasks(client)
+	projects, todoTasks, completedTasks, note_projects, notes, all_columns, err := getTasks(client)
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("获取到 %d 个笔记项目\n", len(note_projects))
-	fmt.Printf("获取到 %d 个笔记\n", len(notes))
 
 	// 获取习惯数据
 	habits, checkins, todayStamp, err := getHabits(client)
@@ -284,7 +346,7 @@ func exportDida365() error {
 
 	// 创建导出器
 	outputDir := utils.GetEnvOrDefault("OUTPUT_DIR", ".")
-	exporter := exporter.NewDida365Exporter(projects, todoTasks, completedTasks, outputDir)
+	exporter := exporter.NewDida365Exporter(projects, todoTasks, completedTasks, outputDir, note_projects, notes, all_columns)
 
 	// 导出项目任务
 	if err := exporter.ExportProjectTasks(); err != nil {

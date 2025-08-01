@@ -17,6 +17,9 @@ type Dida365Exporter struct {
 	projects       []types.Project
 	todoTasks      []types.Task
 	completedTasks []types.Task
+	note_projects  []types.Project
+	notes          []types.Task
+	all_columns    []types.Column
 	outputDir      string
 	calendarDir    string
 	dailyDir       string
@@ -28,7 +31,7 @@ type Dida365Exporter struct {
 }
 
 // NewDida365Exporter 创建新的滴答清单导出器
-func NewDida365Exporter(projects []types.Project, todoTasks, completedTasks []types.Task, outputDir string) *Dida365Exporter {
+func NewDida365Exporter(projects []types.Project, todoTasks, completedTasks []types.Task, outputDir string, note_projects []types.Project, notes []types.Task, all_columns []types.Column) *Dida365Exporter {
 	if outputDir == "" {
 		outputDir = os.Getenv("OUTPUT_DIR")
 		if outputDir == "" {
@@ -45,6 +48,9 @@ func NewDida365Exporter(projects []types.Project, todoTasks, completedTasks []ty
 		projects:       projects,
 		todoTasks:      todoTasks,
 		completedTasks: completedTasks,
+		note_projects:  note_projects,
+		notes:          notes,
+		all_columns:    all_columns,
 		outputDir:      outputDir,
 		calendarDir:    calendarDir,
 		dailyDir:       filepath.Join(calendarDir, "1.Daily"),
@@ -189,7 +195,7 @@ func (e *Dida365Exporter) createTaskMarkdown(task types.Task, taskMap map[string
 
 	// 检查文件是否需要更新
 	if e.shouldSkipTaskFile(filepath, task) {
-		fmt.Printf("任务文件已是最新: %s\n", filename)
+		// fmt.Printf("任务文件已是最新: %s\n", filename)
 		return nil
 	}
 
