@@ -139,7 +139,7 @@ func (e *Dida365Exporter) convertImageURLs(content, projectID, taskID string) st
 	re := regexp.MustCompile(`!\[image]\(([0-9a-f]+)/([^\)]+)\)`)
 	
 	// 替换为指定URL格式
-	return re.ReplaceAllStringFunc(content, func(match string) string {
+	content = re.ReplaceAllStringFunc(content, func(match string) string {
 		parts := re.FindStringSubmatch(match)
 		if len(parts) < 3 {
 			return match // 不符合格式则返回原字符串
@@ -151,8 +151,32 @@ func (e *Dida365Exporter) convertImageURLs(content, projectID, taskID string) st
 		
 		return fmt.Sprintf("![image](%s)", newURL)
 	})
+
+	// 转换任务链接格式
+	content = e.convertTaskLinks(content)
+	
+	return content
 }
 
+// convertTaskLinks 将内容中的任务链接转换为内部链接格式
+func (e *Dida365Exporter) convertTaskLinks(content string) string {
+	// 正则匹配滴答清单任务链接格式：[链接文本](https://dida365.com/webapp/#p/{projectID}/tasks/{taskID})
+	// 捕获组：1=链接文本, 2=projectID, 3=taskID
+	re := regexp.MustCompile(`\[([^\]]+)\]\(https://dida365\.com/webapp/#p/([a-zA-Z0-9]+)/tasks/([a-zA-Z0-9]+)\)`)
+	
+	// 替换为Obsidian内部链接格式：[[taskID|链接文本]]
+	return re.ReplaceAllStringFunc(content, func(match string) string {
+		parts := re.FindStringSubmatch(match)
+		if len(parts) < 4 {
+			return match // 不符合格式则返回原字符串
+		}
+		
+		linkText := parts[1]
+		taskID := parts[3]
+		
+		return fmt.Sprintf("[[%s|%s]]", taskID, linkText)
+	})
+}
 
 // createTaskMarkdown 为单个任务创建Markdown文件
 func (e *Dida365Exporter) createTaskMarkdown(task types.Task, taskMap map[string]types.Task) error {
