@@ -317,7 +317,7 @@ func (c *Dida365Client) GetInboxID() string {
 	return c.inboxID
 }
 
-// GetProjectColumns 获取项目列信息
+// GetProjectColumns 获取项目分组信息
 func (c *Dida365Client) GetProjectColumns(projectID string) ([]types.Column, error) {
 	url := fmt.Sprintf("%s/column/project/%s", c.baseURL, projectID)
 	

@@ -134,7 +134,7 @@ func (e *Dida365Exporter) createNoteMarkdown(task types.Task) error {
 	// 删除旧文件并写入新文件
 	if _, err := os.Stat(filepath); err == nil {
 		os.Remove(filepath)
-		fmt.Printf("删除旧文件: %s\n", filename)
+		// fmt.Printf("删除旧文件: %s\n", filename)
 	}
 
 	if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
@@ -189,7 +189,7 @@ func (e *Dida365Exporter) createColumnMarkdown(column types.Column) error {
 
 	if _, err := os.Stat(filepath); err == nil {
 		os.Remove(filepath)
-		fmt.Printf("删除旧文件: %s\n", filename)
+		// fmt.Printf("删除旧文件: %s\n", filename)
 	}
 
 	if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
@@ -382,6 +382,13 @@ func (e *Dida365Exporter) createTaskMarkdown(task types.Task, taskMap map[string
 			content += fmt.Sprintf("| %s | %s | %s | %s | %s |\n", *task.ParentID, "", "", "", "")
 		}
 		content += "\n"
+	}
+
+	for _, column := range e.all_columns {
+		if *column.ID == *task.ColumnID {
+			content += "## 所属分组\n\n"
+			content += fmt.Sprintf("[[%s|%s]]\n\n", *column.ID, *column.Name)
+		}
 	}
 
 	// 删除旧文件并写入新文件
