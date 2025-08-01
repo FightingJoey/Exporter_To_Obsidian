@@ -39,7 +39,7 @@ type Project struct {
 	NotificationOptions  *string `json:"notificationOptions,omitempty"`
 	TeamID               *string `json:"teamId,omitempty"`
 	Permission           *string `json:"permission,omitempty"`
-	Kind                 *string `json:"kind,omitempty"`
+	Kind                 *string `json:"kind,omitempty"` // NOTE/TASK/TEXT
 	Timeline             *string `json:"timeline,omitempty"`
 	NeedAudit            *bool   `json:"needAudit,omitempty"`
 	BarcodeNeedAudit     *bool   `json:"barcodeNeedAudit,omitempty"`

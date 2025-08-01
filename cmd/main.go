@@ -38,17 +38,27 @@ func preprocessTasks(tasks []types.Task) {
 }
 
 // getTasks 获取任务数据
-func getTasks(client *client.Dida365Client) ([]types.Project, []types.Task, []types.Task, error) {
+func getTasks(client *client.Dida365Client) ([]types.Project, []types.Task, []types.Task, []types.Project, []types.Task, error) {
 	fmt.Println("正在获取滴答清单数据...")
 
 	// 获取所有数据
 	allData, err := client.GetAllData()
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("获取所有数据失败: %v", err)
+		return nil, nil, nil, nil, nil, fmt.Errorf("获取所有数据失败: %v", err)
 	}
 
 	// 解析项目数据
 	var projects []types.Project
+	// 解析笔记项目数据
+	var note_projects []types.Project
+
+	if inboxID := client.GetInboxID(); inboxID != "" {
+		inbox := types.Project{}
+        inbox.ID = inboxID
+        inbox.Name = "收集箱"
+		projects = append(projects, inbox)
+	}
+
 	if projectsData, ok := allData["projectProfiles"].([]interface{}); ok {
 		for _, p := range projectsData {
 			if projectMap, ok := p.(map[string]interface{}); ok {
@@ -59,20 +69,35 @@ func getTasks(client *client.Dida365Client) ([]types.Project, []types.Task, []ty
 				if name, ok := projectMap["name"].(string); ok {
 					project.Name = name
 				}
+				if kind, ok := projectMap["kind"].(string); ok {
+					project.Kind = &kind
+				}
 				// 添加其他字段的解析...
-				projects = append(projects, project)
+				if *project.Kind == "TASK" {
+					projects = append(projects, project)
+				} else if *project.Kind == "NOTE" {
+					note_projects = append(note_projects, project)
+				}
 			}
 		}
 	}
 
 	// 解析待办任务数据
 	var todoTasks []types.Task
+
+	// 解析笔记任务数据
+	var notes []types.Task
+
 	if syncTaskBean, ok := allData["syncTaskBean"].(map[string]interface{}); ok {
 		if tasksData, ok := syncTaskBean["update"].([]interface{}); ok {
 			for _, t := range tasksData {
 				if taskMap, ok := t.(map[string]interface{}); ok {
 					task := parseTaskFromMap(taskMap)
-					todoTasks = append(todoTasks, task)
+					if *task.Kind == "TEXT" {
+						todoTasks = append(todoTasks, task)
+					} else if *task.Kind == "NOTE" {
+						notes = append(notes, task)
+					}
 				}
 			}
 		}
@@ -102,10 +127,10 @@ func getTasks(client *client.Dida365Client) ([]types.Project, []types.Task, []ty
 	preprocessTasks(todoTasks)
 	preprocessTasks(completedTasks)
 
-	fmt.Printf("获取到 %d 个项目，%d 个待办任务，%d 个已完成任务\n",
-		len(projects), len(todoTasks), len(completedTasks))
+	fmt.Printf("获取到 %d 个项目，%d 个待办任务，%d 个已完成任务，%d 个笔记项目，%d 个笔记\n",
+		len(projects), len(todoTasks), len(completedTasks), len(note_projects), len(notes))
 
-	return projects, todoTasks, completedTasks, nil
+	return projects, todoTasks, completedTasks, note_projects, notes, nil
 }
 
 // parseTaskFromMap 从map解析任务
@@ -149,6 +174,9 @@ func parseTaskFromMap(taskMap map[string]interface{}) types.Task {
 	}
 	if isAllDay, ok := taskMap["isAllDay"].(bool); ok {
 		task.IsAllDay = &isAllDay
+	}
+	if kind, ok := taskMap["kind"].(string); ok {
+		task.Kind = &kind
 	}
 
 	// 解析任务项
@@ -240,10 +268,13 @@ func exportDida365() error {
 	}
 
 	// 获取任务数据
-	projects, todoTasks, completedTasks, err := getTasks(client)
+	projects, todoTasks, completedTasks, note_projects, notes, err := getTasks(client)
 	if err != nil {
 		return err
 	}
+
+	fmt.Printf("获取到 %d 个笔记项目\n", len(note_projects))
+	fmt.Printf("获取到 %d 个笔记\n", len(notes))
 
 	// 获取习惯数据
 	habits, checkins, todayStamp, err := getHabits(client)
