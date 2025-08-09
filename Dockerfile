@@ -1,5 +1,5 @@
 # 使用官方Go镜像作为构建环境
-FROM --platform=linux/arm/v7 registry.cn-hangzhou.aliyuncs.com/aliyun-golang/golang:1.21-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.21-alpine AS builder
 
 # 设置工作目录
 WORKDIR /app
@@ -40,7 +40,7 @@ CMD ["./main"]
 # 本地构建
 # docker build -t exporter-to-obsidian:latest .  
 
-# docker buildx build --platform linux/arm/v7 -t exporter_to_obsidian:latest .
+# docker buildx build --platform linux/arm/v7 -t exporter_to_obsidian:latest --load . 
 
 # 推送到Docker Hub
 # docker buildx build --platform linux/arm64,linux/amd64 -t username/exporter-to-obsidian:latest --push .
