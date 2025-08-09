@@ -114,16 +114,7 @@ func (e *Dida365Exporter) createNoteMarkdown(task types.Task) error {
 	}
 
 	// 准备Front Matter
-	frontMatter := e.buildTaskFrontMatter(task)
-
-	// 构建文件内容
-	content := "---\n"
-	for key, value := range frontMatter {
-		if value != nil {
-			content += fmt.Sprintf("%s: %v\n", key, value)
-		}
-	}
-	content += "---\n\n"
+	content := e.buildTaskFrontMatter(task)
 
 	// 添加任务描述
 	if task.Content != nil && *task.Content != "" {
@@ -162,30 +153,50 @@ func (e *Dida365Exporter) createColumnMarkdown(column types.Column) error {
 	filename := fmt.Sprintf("%s.md", *column.ID)
 	filepath := filepath.Join(e.columnsDir, filename)
 
-	frontMatter := make(map[string]interface{})
-	if column.Name != nil {
-		frontMatter["title"] = *column.Name
+	skip := func(filepath string, column types.Column) bool {
+		if _, err := os.Stat(filepath); os.IsNotExist(err) {
+			return false
+		}
+		content, err := os.ReadFile(filepath)
+		if err != nil {
+			return false
+		}
+
+		// 检查修改时间
+		if column.ModifiedTime != nil {
+			fileModifiedTime := utils.ExtractFrontMatterField(string(content), "modified_time")
+			columnModifiedTime := utils.FormatTime(*column.ModifiedTime, "2006-01-02 15:04:05")
+			return fileModifiedTime == columnModifiedTime
+		}
+		return false
 	}
-	if column.ID != nil {
-		frontMatter["column_id"] = *column.ID
-	}
-	if column.ProjectID != nil {
-		frontMatter["project_id"] = *column.ProjectID
-	}
-	if column.CreatedTime != nil {
-		frontMatter["created_time"] = utils.FormatTime(*column.CreatedTime, "2006-01-02 15:04:05")
-	}
-	if column.ModifiedTime != nil {
-		frontMatter["modified_time"] = utils.FormatTime(*column.ModifiedTime, "2006-01-02 15:04:05")
+
+	if skip(filepath, column) {
+		fmt.Printf("分组文件已是最新: %s\n", filename)
+		return nil
 	}
 
 	content := "---\n"
-	for key, value := range frontMatter {
-		if value != nil {
-			content += fmt.Sprintf("%s: %v\n", key, value)
+	write := func(k string, v interface{}) {
+		if v != nil {
+			content += fmt.Sprintf("%s: %v\n", k, v)
 		}
 	}
+	write("title", *column.Name)
+	write("column_id", *column.ID)
+	write("project_id", *column.ProjectID)
+	write("created_time", utils.FormatTime(*column.CreatedTime, "2006-01-02 15:04:05"))
+	write("modified_time", utils.FormatTime(*column.ModifiedTime, "2006-01-02 15:04:05"))
 	content += "---\n\n"
+
+	content += "```dataviewjs\n" +
+		"dv.view('dida365TaskTable', {\n" +
+		"    folderPath: '9.Archive/Dida365/Tasks',\n" +
+		"    condition: (p, c) => {\n" +
+		"        return p.frontmatter?.column_id === c.frontmatter?.column_id;\n" +
+		"    }\n" +
+		"});\n" +
+		"```\n\n"
 
 	if _, err := os.Stat(filepath); err == nil {
 		os.Remove(filepath)
@@ -319,16 +330,7 @@ func (e *Dida365Exporter) createTaskMarkdown(task types.Task, taskMap map[string
 	}
 
 	// 准备Front Matter
-	frontMatter := e.buildTaskFrontMatter(task)
-
-	// 构建文件内容
-	content := "---\n"
-	for key, value := range frontMatter {
-		if value != nil {
-			content += fmt.Sprintf("%s: %v\n", key, value)
-		}
-	}
-	content += "---\n\n"
+	content := e.buildTaskFrontMatter(task)
 
 	// 添加任务描述
 	if task.Content != nil && *task.Content != "" {
@@ -359,37 +361,39 @@ func (e *Dida365Exporter) createTaskMarkdown(task types.Task, taskMap map[string
 	}
 
 	// 添加子任务列表
-	if len(task.ChildIDs) > 0 {
-		content += "## 子任务列表\n\n"
-		content += e.createTableHeader()
-		for _, childID := range task.ChildIDs {
-			if childTask, exists := taskMap[childID]; exists {
-				content += e.createTaskTableContent(childTask)
-			} else {
-				content += fmt.Sprintf("| %s | %s | %s | %s | %s |\n", childID, "", "", "", "")
-			}
-		}
-		content += "\n"
-	}
+	// if len(task.ChildIDs) > 0 {
+	// 	content += "## 子任务列表\n\n"
+	// 	content += e.createTableHeader()
+	// 	for _, childID := range task.ChildIDs {
+	// 		if childTask, exists := taskMap[childID]; exists {
+	// 			content += e.createTaskTableContent(childTask)
+	// 		} else {
+	// 			content += fmt.Sprintf("| %s | %s | %s | %s | %s |\n", childID, "", "", "", "")
+	// 		}
+	// 	}
+	// 	content += "\n"
+	// }
 
 	// 添加父任务
-	if task.ParentID != nil && *task.ParentID != "" {
-		content += "## 父任务\n\n"
-		content += e.createTableHeader()
-		if parentTask, exists := taskMap[*task.ParentID]; exists {
-			content += e.createTaskTableContent(parentTask)
-		} else {
-			content += fmt.Sprintf("| %s | %s | %s | %s | %s |\n", *task.ParentID, "", "", "", "")
-		}
-		content += "\n"
-	}
-
-	for _, column := range e.all_columns {
-		if *column.ID == *task.ColumnID {
-			content += "## 所属分组\n\n"
-			content += fmt.Sprintf("[[%s|%s]]\n\n", *column.ID, *column.Name)
-		}
-	}
+	// if task.ParentID != nil && *task.ParentID != "" {
+	// 	content += "## 父任务\n\n"
+	// 	content += e.createTableHeader()
+	// 	if parentTask, exists := taskMap[*task.ParentID]; exists {
+	// 		content += e.createTaskTableContent(parentTask)
+	// 	} else {
+	// 		content += fmt.Sprintf("| %s | %s | %s | %s | %s |\n", *task.ParentID, "", "", "", "")
+	// 	}
+	// 	content += "\n"
+	// }
+	content += "## 子任务列表\n\n"
+	content += "```dataviewjs\n" +
+		"dv.view('dida365TaskTable', {\n" +
+		"    folderPath: '9.Archive/Dida365/Tasks',\n" +
+		"    condition: (p, c) => {\n" +
+		"        return p.frontmatter?.task_id === c.frontmatter?.parent_id;\n" +
+		"    }\n" +
+		"});\n" +
+		"```\n\n"
 
 	// 删除旧文件并写入新文件
 	if _, err := os.Stat(filepath); err == nil {
@@ -427,45 +431,39 @@ func (e *Dida365Exporter) shouldSkipFile(filepath string, task types.Task) bool 
 }
 
 // buildTaskFrontMatter 构建任务的Front Matter
-func (e *Dida365Exporter) buildTaskFrontMatter(task types.Task) map[string]interface{} {
-	frontMatter := make(map[string]interface{})
-
-	if task.Title != nil {
-		frontMatter["title"] = *task.Title
+func (e *Dida365Exporter) buildTaskFrontMatter(task types.Task) string {
+	content := "---\n"
+	write := func(k string, v interface{}) {
+		if v != nil {
+			content += fmt.Sprintf("%s: %v\n", k, v)
+		}
 	}
-	if task.ID != nil {
-		frontMatter["task_id"] = *task.ID
+	write("title", *task.Title)
+	write("task_id", *task.ID)
+	write("project_id", *task.ProjectID)
+	write("column_id", *task.ColumnID)
+	if task.ParentID != nil {
+		write("parent_id", *task.ParentID)
 	}
-	if task.ProjectID != nil {
-		frontMatter["project_id"] = *task.ProjectID
-	}
+	write("priority", *task.Priority)
+	write("status", *task.Status)
 	if task.ProcessedStartDate != nil {
-		frontMatter["start_date"] = task.ProcessedStartDate.Format("2006-01-02 15:04:05")
+		write("start_date", task.ProcessedStartDate.Format("2006-01-02 15:04:05"))
 	} else if task.StartDate != nil {
-		frontMatter["start_date"] = utils.FormatTime(*task.StartDate, "2006-01-02 15:04:05")
+		write("start_date", utils.FormatTime(*task.StartDate, "2006-01-02 15:04:05"))
 	}
 	if task.ProcessedDueDate != nil {
-		frontMatter["due_date"] = task.ProcessedDueDate.Format("2006-01-02 15:04:05")
+		write("due_date", task.ProcessedDueDate.Format("2006-01-02 15:04:05"))
 	} else if task.DueDate != nil {
-		frontMatter["due_date"] = utils.FormatTime(*task.DueDate, "2006-01-02 15:04:05")
+		write("due_date", utils.FormatTime(*task.DueDate, "2006-01-02 15:04:05"))
 	}
-	if task.Priority != nil {
-		frontMatter["priority"] = *task.Priority
-	}
-	if task.Status != nil {
-		frontMatter["status"] = *task.Status
-	}
-	if task.CreatedTime != nil {
-		frontMatter["created_time"] = utils.FormatTime(*task.CreatedTime, "2006-01-02 15:04:05")
-	}
-	if task.ModifiedTime != nil {
-		frontMatter["modified_time"] = utils.FormatTime(*task.ModifiedTime, "2006-01-02 15:04:05")
-	}
+	write("created_time", utils.FormatTime(*task.CreatedTime, "2006-01-02 15:04:05"))
+	write("modified_time", utils.FormatTime(*task.ModifiedTime, "2006-01-02 15:04:05"))
 	if task.CompletedTime != nil {
-		frontMatter["completed_time"] = utils.FormatTime(*task.CompletedTime, "2006-01-02 15:04:05")
+		write("completed_time", utils.FormatTime(*task.CompletedTime, "2006-01-02 15:04:05"))
 	}
-
-	return frontMatter
+	content += "---\n\n"
+	return content
 }
 
 // getProjectIndexContent 获取项目索引内容
@@ -495,7 +493,6 @@ func (e *Dida365Exporter) getProjectIndexContent(project types.Project, tasks []
 			tasksInColumn := columnTasks[*column.ID]
 			if len(tasksInColumn) > 0 {
 				// 显示列标题
-				fmt.Printf("列ID: %s, 列名称: %s\n", *column.ID, *column.Name)
 				content += fmt.Sprintf("### %s\n\n", *column.Name)
 				
 				// 对列内的任务按优先级排序

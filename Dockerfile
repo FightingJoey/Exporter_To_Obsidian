@@ -40,6 +40,8 @@ CMD ["./main"]
 # 本地构建
 # docker build -t exporter-to-obsidian:latest .  
 
+# docker buildx build --platform linux/arm/v7 -t exporter_to_obsidian:latest .
+
 # 推送到Docker Hub
 # docker buildx build --platform linux/arm64,linux/amd64 -t username/exporter-to-obsidian:latest --push .
 

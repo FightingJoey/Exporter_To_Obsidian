@@ -47,8 +47,8 @@ func NewMemosExporter(records []types.MemosRecord, outputDir string) *MemosExpor
 	return exporter
 }
 
-// ExportDailySummary 导出每日Memos摘要
-func (e *MemosExporter) ExportDailySummary(date time.Time) error {
+// ExportDailyMemos 导出每日Memos摘要
+func (e *MemosExporter) ExportDailyMemos(date time.Time) error {
 	// 设置日期范围
 	startDate := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.Local)
 	endDate := startDate.Add(24*time.Hour - time.Second)
@@ -82,7 +82,7 @@ func (e *MemosExporter) ExportDailySummary(date time.Time) error {
 			content += e.formatMemosRecord(record)
 		}
 	} else {
-		content += "今日没有Memos记录。\n"
+		return fmt.Errorf("写入每日Memos摘要失败: 今日没有Memos记录")
 	}
 
 	// 写入文件

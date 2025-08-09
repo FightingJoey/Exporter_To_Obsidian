@@ -418,7 +418,7 @@ func exportMemos() error {
 
 	// 导出每日摘要
 	today := time.Now()
-	if err := exporter.ExportDailySummary(today); err != nil {
+	if err := exporter.ExportDailyMemos(today); err != nil {
 		return fmt.Errorf("导出Memos每日摘要失败: %v", err)
 	}
 
