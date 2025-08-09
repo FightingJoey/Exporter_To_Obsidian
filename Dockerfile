@@ -1,5 +1,5 @@
 # 使用官方Go镜像作为构建环境
-FROM --platform=$BUILDPLATFORM golang:1.21-alpine AS builder
+FROM --platform=linux/arm/v7 golang:1.21-alpine AS builder
 
 # 设置工作目录
 WORKDIR /app
