@@ -153,26 +153,8 @@ func (e *Dida365Exporter) createColumnMarkdown(column types.Column) error {
 	filename := fmt.Sprintf("%s.md", *column.ID)
 	filepath := filepath.Join(e.columnsDir, filename)
 
-	skip := func(filepath string, column types.Column) bool {
-		if _, err := os.Stat(filepath); os.IsNotExist(err) {
-			return false
-		}
-		content, err := os.ReadFile(filepath)
-		if err != nil {
-			return false
-		}
-
-		// 检查修改时间
-		if column.ModifiedTime != nil {
-			fileModifiedTime := utils.ExtractFrontMatterField(string(content), "modified_time")
-			columnModifiedTime := utils.FormatTime(*column.ModifiedTime, "2006-01-02 15:04:05")
-			return fileModifiedTime == columnModifiedTime
-		}
-		return false
-	}
-
-	if skip(filepath, column) {
-		fmt.Printf("分组文件已是最新: %s\n", filename)
+	if e.skip(filepath) {
+		// fmt.Printf("文件已存在: %s\n", filename)
 		return nil
 	}
 
@@ -361,18 +343,26 @@ func (e *Dida365Exporter) createTaskMarkdown(task types.Task, taskMap map[string
 	}
 
 	// 添加子任务列表
-	// if len(task.ChildIDs) > 0 {
-	// 	content += "## 子任务列表\n\n"
-	// 	content += e.createTableHeader()
-	// 	for _, childID := range task.ChildIDs {
-	// 		if childTask, exists := taskMap[childID]; exists {
-	// 			content += e.createTaskTableContent(childTask)
-	// 		} else {
-	// 			content += fmt.Sprintf("| %s | %s | %s | %s | %s |\n", childID, "", "", "", "")
-	// 		}
-	// 	}
-	// 	content += "\n"
-	// }
+	if len(task.ChildIDs) > 0 {
+		content += "## 子任务列表\n\n"
+		content += "```dataviewjs\n" +
+			"dv.view('dida365TaskTable', {\n" +
+			"    folderPath: '9.Archive/Dida365/Tasks',\n" +
+			"    condition: (p, c) => {\n" +
+			"        return p.frontmatter?.task_id === c.frontmatter?.parent_id;\n" +
+			"    }\n" +
+			"});\n" +
+			"```\n\n"
+		// content += e.createTableHeader()
+		// for _, childID := range task.ChildIDs {
+		// 	if childTask, exists := taskMap[childID]; exists {
+		// 		content += e.createTaskTableContent(childTask)
+		// 	} else {
+		// 		content += fmt.Sprintf("| %s | %s | %s | %s | %s |\n", childID, "", "", "", "")
+		// 	}
+		// }
+		// content += "\n"
+	}
 
 	// 添加父任务
 	// if task.ParentID != nil && *task.ParentID != "" {
@@ -385,15 +375,6 @@ func (e *Dida365Exporter) createTaskMarkdown(task types.Task, taskMap map[string
 	// 	}
 	// 	content += "\n"
 	// }
-	content += "## 子任务列表\n\n"
-	content += "```dataviewjs\n" +
-		"dv.view('dida365TaskTable', {\n" +
-		"    folderPath: '9.Archive/Dida365/Tasks',\n" +
-		"    condition: (p, c) => {\n" +
-		"        return p.frontmatter?.task_id === c.frontmatter?.parent_id;\n" +
-		"    }\n" +
-		"});\n" +
-		"```\n\n"
 
 	// 删除旧文件并写入新文件
 	if _, err := os.Stat(filepath); err == nil {
@@ -869,91 +850,21 @@ func (e *Dida365Exporter) ExportWeeklySummary(date time.Time) error {
 	startOfWeek := date.AddDate(0, 0, -(weekday - 1))
 	endOfWeek := startOfWeek.AddDate(0, 0, 6)
 
-	// 设置时间范围
-	startDate := time.Date(startOfWeek.Year(), startOfWeek.Month(), startOfWeek.Day(), 0, 0, 0, 0, time.Local)
-	endDate := time.Date(endOfWeek.Year(), endOfWeek.Month(), endOfWeek.Day(), 23, 59, 59, 999999999, time.Local)
-
-	// 获取该周的任务
-	tasks := e.getTasksInDateRange(startDate, endDate)
-
 	// 创建文件名
 	year, week := time.Now().ISOWeek()
 	filename := fmt.Sprintf("%d-W%d-Dida365.md", year, week)
 	filepath := filepath.Join(e.weeklyDir, filename)
 
+	if e.skip(filepath) {
+		// fmt.Printf("文件已存在: %s\n", filename)
+		return nil
+	}
+
 	// 准备文件内容
 	content := e.getSummaryFrontMatter()
 	content += fmt.Sprintf("# %d年第 %02d 周任务摘要\n\n", year, week)
 	content += fmt.Sprintf("周期： %s 至 %s \n\n", startOfWeek.Format("2006-01-02"), endOfWeek.Format("2006-01-02"))
-
-	if len(tasks) > 0 {
-		// 按天聚合任务
-		// 预定义中文星期名称
-		weekdays := []string{"周一", "周二", "周三", "周四", "周五", "周六", "周日"}
-
-		// 初始化日期相关容器
-		days := make([]string, 7)
-		daysWithWeekday := make([]string, 7)
-		tasksByDay := make(map[string][]types.Task)
-
-		// 生成未来7天的日期数据
-		for i := 0; i < 7; i++ {
-			currentDate := startOfWeek.AddDate(0, 0, i)
-
-			// 格式化日期为 YYYY-MM-DD [6,7](@ref)
-			dateStr := currentDate.Format("2006-01-02")
-			days[i] = dateStr
-
-			// 计算星期索引 (Go的Weekday周日=0, 周一=1...周六=6)
-			weekIndex := (int(currentDate.Weekday()) + 6) % 7
-			daysWithWeekday[i] = fmt.Sprintf("%s（%s）", weekdays[weekIndex], dateStr)
-
-			// 初始化任务映射
-			tasksByDay[dateStr] = []types.Task{}
-		}
-
-		// 按天聚合任务
-		for _, task := range tasks {
-			// 确定任务属于哪一天
-			taskDate := e.getTaskDate(task, startDate, endDate)
-			if taskDate != "" {
-				tasksByDay[taskDate] = append(tasksByDay[taskDate], task)
-			}
-		}
-
-		// 为每天生成内容
-		for i, dayStr := range days {
-			dayWithWeekday := daysWithWeekday[i]
-			content += fmt.Sprintf("## %s\n\n", dayWithWeekday)
-			dayTasks := tasksByDay[dayStr]
-
-			if len(dayTasks) > 0 {
-				content += e.createTableHeader()
-
-				// 按优先级排序
-				sort.Slice(dayTasks, func(i, j int) bool {
-					priI := 0
-					if dayTasks[i].Priority != nil {
-						priI = *dayTasks[i].Priority
-					}
-					priJ := 0
-					if dayTasks[j].Priority != nil {
-						priJ = *dayTasks[j].Priority
-					}
-					return priI > priJ
-				})
-
-				for _, task := range dayTasks {
-					content += e.createTaskTableContent(task)
-				}
-			} else {
-				content += "无任务\n"
-			}
-			content += "\n"
-		}
-	} else {
-		content += "本周没有任务。\n"
-	}
+	content += e.dataviewjs(startOfWeek, endOfWeek)
 
 	// 写入文件
 	if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
@@ -975,88 +886,19 @@ func (e *Dida365Exporter) ExportMonthlySummary(date time.Time) error {
 		lastDay = time.Date(date.Year(), date.Month()+1, 1, 23, 59, 59, 0, time.Local).AddDate(0, 0, -1)
 	}
 
-	// 获取当月任务（假设已实现）
-	tasks := e.getTasksInDateRange(firstDay, lastDay)
-
 	// 创建目录路径
 	filename := fmt.Sprintf("%s-Dida365.md", date.Format("2006-01"))
 	filepath := filepath.Join(e.monthlyDir, filename)
 
+	if e.skip(filepath) {
+		// fmt.Printf("文件已存在: %s\n", filename)
+		return nil
+	}
+
 	// 构建Markdown内容
 	content := e.getSummaryFrontMatter()
 	content += fmt.Sprintf("# %s任务摘要\n\n", date.Format("2006年01月"))
-
-	if len(tasks) > 0 {
-		cur := firstDay
-		var weeks [][2]time.Time
-
-		// 将月份按周分割
-		for cur.Before(lastDay) || cur.Equal(lastDay) {
-			// 计算本周周一
-			weekday := cur.Weekday()
-			if weekday == time.Sunday {
-				weekday = 7 // 调整周日数值
-			}
-			daysToMonday := -int(weekday - time.Monday)
-			weekStart := time.Date(cur.Year(), cur.Month(), cur.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, daysToMonday)
-
-			// 计算本周周日
-			weekEnd := weekStart.AddDate(0, 0, 6)
-			if weekEnd.After(lastDay) {
-				weekEnd = lastDay
-			}
-
-			// 添加有效周段
-			if !weekStart.After(lastDay) {
-				weeks = append(weeks, [2]time.Time{weekStart, weekEnd})
-			}
-			cur = weekEnd.AddDate(0, 0, 1)
-		}
-
-		// 按周生成任务摘要
-		for _, week := range weeks {
-			weekStart, weekEnd := week[0], week[1]
-			_, weekNum := weekStart.ISOWeek() // ISO标准周计算
-			content += fmt.Sprintf("## 第 %02d 周 (%s ~ %s)\n\n",
-				weekNum,
-				weekStart.Format("2006-01-02"),
-				weekEnd.Format("2006-01-02"))
-
-			// 筛选本周任务
-			var weekTasks []types.Task
-			for _, task := range tasks {
-				if e.taskInRange(task, weekStart, weekEnd) {
-					weekTasks = append(weekTasks, task)
-				}
-			}
-
-			if len(weekTasks) > 0 {
-				content += e.createTableHeader()
-
-				// 按优先级排序
-				sort.Slice(weekTasks, func(i, j int) bool {
-					priI := 0
-					if weekTasks[i].ProcessedDueDate != nil {
-						priI = int(weekTasks[i].ProcessedDueDate.Unix())
-					}
-					priJ := 0
-					if weekTasks[j].ProcessedDueDate != nil {
-						priJ = int(weekTasks[j].ProcessedDueDate.Unix())
-					}
-					return priI < priJ
-				})
-
-				for _, task := range weekTasks {
-					content += e.createTaskTableContent(task)
-				}
-			} else {
-				content += "无任务\n"
-			}
-			content += "\n"
-		}
-	} else {
-		content += "本月没有任务。\n"
-	}
+	content += e.dataviewjs(firstDay, lastDay)
 
 	// 写入文件
 	if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
@@ -1065,6 +907,40 @@ func (e *Dida365Exporter) ExportMonthlySummary(date time.Time) error {
 
 	fmt.Printf("已创建每月摘要：%s\n", filename)
 	return nil
+}
+
+func (e *Dida365Exporter) skip(filepath string) bool {
+	if _, err := os.Stat(filepath); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
+func (e *Dida365Exporter) dataviewjs(start time.Time, end time.Time) string { 
+	content := "```dataviewjs\n" +
+            "dv.view('dida365TaskTable', {\n" +
+            "    folderPath: '9.Archive/Dida365/Tasks',\n" +
+            "    condition: (p, c) => {\n" +
+			"        const rawDue = p.frontmatter?.due_date;\n" +
+			"        const rawStart = p.frontmatter?.start_date;\n" +
+            "        const normalize = v => {\n" +
+			"            if (!v) return null;\n" +
+			"            const str = String(v);\n" +
+			"            const m = str.match(/^(\\d{4}-\\d{2}-\\d{2})/);\n" +
+			"			 return m ? m[1] : null;\n" +
+			"        };\n" +
+			"        const dueStr = normalize(rawDue);\n" +
+			"        const startStr = normalize(rawStart);\n" +
+			"		 const dueDate   = dv.date(dueStr);\n" +
+			"		 const startDate = dv.date(startStr);\n" +
+			fmt.Sprintf("        const weekStart = dv.date('%s');\n", start.Format("2006-01-02")) +
+			fmt.Sprintf("        const weekEnd   = dv.date('%s');\n", end.Format("2006-01-02")) +
+			"        const inWeek = d => d && d >= weekStart && d <= weekEnd;\n" +
+			"        return inWeek(dueDate) || inWeek(startDate);\n" +
+            "    }\n" +
+            "});\n" +
+            "```\n\n"
+	return content
 }
 
 // getTaskDate 获取任务所属的日期

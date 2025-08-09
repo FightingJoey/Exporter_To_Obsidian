@@ -158,7 +158,7 @@ func getTasks(client *client.Dida365Client) ([]types.Project, []types.Task, []ty
 			for _, t := range tasksData {
 				if taskMap, ok := t.(map[string]interface{}); ok {
 					task := parseTaskFromMap(taskMap)
-					if *task.Kind == "TEXT" {
+					if *task.Kind == "TEXT" || *task.Kind == "CHECKLIST" {
 						todoTasks = append(todoTasks, task)
 					} else if *task.Kind == "NOTE" {
 						notes = append(notes, task)
