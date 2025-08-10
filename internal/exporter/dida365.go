@@ -158,10 +158,10 @@ func (e *Dida365Exporter) createColumnMarkdown(column types.Column) error {
 		return nil
 	}
 
-	content := "---\n"
+	frontMatter := ""
 	write := func(k string, v interface{}) {
 		if v != nil {
-			content += fmt.Sprintf("%s: %v\n", k, v)
+			frontMatter += fmt.Sprintf("%s: %v\n", k, v)
 		}
 	}
 	write("title", *column.Name)
@@ -169,7 +169,7 @@ func (e *Dida365Exporter) createColumnMarkdown(column types.Column) error {
 	write("project_id", *column.ProjectID)
 	write("created_time", utils.FormatTime(*column.CreatedTime, "2006-01-02 15:04:05"))
 	write("modified_time", utils.FormatTime(*column.ModifiedTime, "2006-01-02 15:04:05"))
-	content += "---\n\n"
+	content := utils.GetFrontMatter([]string{"noyaml"}, frontMatter)
 
 	content += "```dataviewjs\n" +
 		"dv.view('dida365TaskTable', {\n" +
@@ -204,15 +204,7 @@ func (e *Dida365Exporter) ExportProjectTasks() error {
 	}
 
 	// 创建项目索引内容
-	frontMatter := map[string]interface{}{
-		"updated_time": time.Now().Format("2006-01-02 15:04:05"),
-	}
-
-	allContent := "---\n"
-	for key, value := range frontMatter {
-		allContent += fmt.Sprintf("%s: %v\n", key, value)
-	}
-	allContent += "---\n\n"
+	allContent := utils.GetFrontMatter([]string{"noyaml"}, "")
 
 	// 为每个项目生成内容
 	for _, project := range e.projects {
@@ -413,10 +405,10 @@ func (e *Dida365Exporter) shouldSkipFile(filepath string, task types.Task) bool 
 
 // buildTaskFrontMatter 构建任务的Front Matter
 func (e *Dida365Exporter) buildTaskFrontMatter(task types.Task) string {
-	content := "---\n"
+	frontMatter := ""
 	write := func(k string, v interface{}) {
 		if v != nil {
-			content += fmt.Sprintf("%s: %v\n", k, v)
+			frontMatter += fmt.Sprintf("%s: %v\n", k, v)
 		}
 	}
 	write("title", *task.Title)
@@ -443,7 +435,7 @@ func (e *Dida365Exporter) buildTaskFrontMatter(task types.Task) string {
 	if task.CompletedTime != nil {
 		write("completed_time", utils.FormatTime(*task.CompletedTime, "2006-01-02 15:04:05"))
 	}
-	content += "---\n\n"
+	content := utils.GetFrontMatter([]string{"noyaml"}, frontMatter)
 	return content
 }
 
@@ -610,8 +602,8 @@ func (e *Dida365Exporter) ExportDailySummary(date time.Time, habits []types.Habi
 	filepath := filepath.Join(e.dailyDir, filename)
 
 	// 准备文件内容
-	content := e.getSummaryFrontMatter()
-	content += fmt.Sprintf("# %s 摘要\n\n", date.Format("2006-01-02"))
+	content := utils.GetFrontMatter([]string{"noyaml"}, "")
+	// content += fmt.Sprintf("\n# %s 摘要\n\n", date.Format("2006-01-02"))
 
 	// 添加习惯打卡
 	if len(habits) > 0 {
@@ -824,22 +816,6 @@ func (e *Dida365Exporter) formatTaskLine(task types.Task, index int, ordered boo
 	return line
 }
 
-// getSummaryFrontMatter 获取摘要的Front Matter
-func (e *Dida365Exporter) getSummaryFrontMatter() string {
-	frontMatter := map[string]interface{}{
-		"updated_time": time.Now().Format("2006-01-02 15:04:05"),
-	}
-
-	content := "---\n"
-	for key, value := range frontMatter {
-		if value != nil {
-			content += fmt.Sprintf("%s: %v\n", key, value)
-		}
-	}
-	content += "---\n\n"
-	return content
-}
-
 // ExportWeeklySummary 导出每周摘要
 func (e *Dida365Exporter) ExportWeeklySummary(date time.Time) error {
 	// 获取周的开始和结束日期（周一到周日）
@@ -861,8 +837,8 @@ func (e *Dida365Exporter) ExportWeeklySummary(date time.Time) error {
 	}
 
 	// 准备文件内容
-	content := e.getSummaryFrontMatter()
-	content += fmt.Sprintf("# %d年第 %02d 周任务摘要\n\n", year, week)
+	content := utils.GetFrontMatter([]string{"fullwidth", "noyaml"}, "")
+	content += fmt.Sprintf("# %d年第%02d周任务摘要\n\n", year, week)
 	content += fmt.Sprintf("周期： %s 至 %s \n\n", startOfWeek.Format("2006-01-02"), endOfWeek.Format("2006-01-02"))
 	content += e.dataviewjs(startOfWeek, endOfWeek)
 
@@ -896,7 +872,7 @@ func (e *Dida365Exporter) ExportMonthlySummary(date time.Time) error {
 	}
 
 	// 构建Markdown内容
-	content := e.getSummaryFrontMatter()
+	content := utils.GetFrontMatter([]string{"fullwidth", "noyaml"}, "")
 	content += fmt.Sprintf("# %s任务摘要\n\n", date.Format("2006年01月"))
 	content += e.dataviewjs(firstDay, lastDay)
 

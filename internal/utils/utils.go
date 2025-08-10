@@ -112,3 +112,31 @@ func GetTodayStamp() int {
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
 	return int(today.Unix())
 }
+
+func getCssClasses(cssclasses []string) string { 
+	content := "cssclasses: \n"
+	for _, class := range cssclasses {
+		content += fmt.Sprintf("  - %s\n", class)
+	}
+	return content
+}
+
+// GetFrontMatter 获取前言信息
+func GetFrontMatter(cssclasses []string, mate string) string {
+	frontMatter := map[string]interface{} {
+		"obsidianUIMode": "preview",
+	}
+
+	content := "---\n"
+	if mate != "" {
+		content += mate
+	}
+	for key, value := range frontMatter {
+		if value != nil {
+			content += fmt.Sprintf("%s: %v\n", key, value)
+		}
+	}
+	content += getCssClasses(cssclasses)
+	content += "---\n\n"
+	return content
+}

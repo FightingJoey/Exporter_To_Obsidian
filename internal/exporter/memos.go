@@ -61,8 +61,8 @@ func (e *MemosExporter) ExportDailyMemos(date time.Time) error {
 	filepath := filepath.Join(e.memosDir, filename)
 
 	// 准备文件内容
-	content := e.getSummaryFrontMatter()
-	content += fmt.Sprintf("# %s Memos摘要\n\n", date.Format("2006-01-02"))
+	content := utils.GetFrontMatter([]string{"noyaml"}, "")
+	// content += fmt.Sprintf("# %s Memos摘要\n\n", date.Format("2006-01-02"))
 
 	if len(dailyRecords) > 0 {
 		// 按时间排序（最新的在前）
@@ -143,20 +143,4 @@ func (e *MemosExporter) formatMemosRecord(record types.MemosRecord) string {
 
 	content.WriteString("---\n\n")
 	return content.String()
-}
-
-// getSummaryFrontMatter 获取摘要的Front Matter
-func (e *MemosExporter) getSummaryFrontMatter() string {
-	frontMatter := map[string]interface{}{
-		"updated_time": time.Now().Format("2006-01-02 15:04:05"),
-	}
-
-	content := "---\n"
-	for key, value := range frontMatter {
-		if value != nil {
-			content += fmt.Sprintf("%s: %v\n", key, value)
-		}
-	}
-	content += "---\n\n"
-	return content
 }
