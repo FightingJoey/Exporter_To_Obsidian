@@ -3,9 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"io/fs"
 	"os"
 	"strconv"
 	"time"
+	"path/filepath"
+	"strings"
 
 	"exporter-to-obsidian/internal/client"
 	"exporter-to-obsidian/internal/exporter"
@@ -428,7 +431,7 @@ func exportMemos() error {
 
 func removeConflictFiles() {
 	searchPath := utils.GetEnvOrDefault("OUTPUT_DIR", ".")
-	keyword = "sync-conflict"
+	keyword := "sync-conflict"
 
 	_ = filepath.WalkDir(searchPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
