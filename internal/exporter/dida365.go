@@ -169,7 +169,7 @@ func (e *Dida365Exporter) createColumnMarkdown(column types.Column) error {
 	write("project_id", *column.ProjectID)
 	write("created_time", utils.FormatTime(*column.CreatedTime, "2006-01-02 15:04:05"))
 	write("modified_time", utils.FormatTime(*column.ModifiedTime, "2006-01-02 15:04:05"))
-	content := utils.GetFrontMatter([]string{"noyaml"}, frontMatter)
+	content := utils.GetFrontMatter([]string{"fullwidth", "noyaml"}, frontMatter)
 
 	content += "```dataviewjs\n" +
 		"dv.view('dida365TaskTable', {\n" +
@@ -436,6 +436,7 @@ func (e *Dida365Exporter) buildTaskFrontMatter(task types.Task) string {
 		write("completed_time", utils.FormatTime(*task.CompletedTime, "2006-01-02 15:04:05"))
 	}
 	content := utils.GetFrontMatter([]string{"noyaml"}, frontMatter)
+	content += fmt.Sprintf("# %s\n\n", *task.Title)
 	return content
 }
 
