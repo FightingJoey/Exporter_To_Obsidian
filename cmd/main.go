@@ -332,7 +332,7 @@ func exportDida365() error {
 	// 创建滴答清单客户端
 	client, err := client.NewDida365Client("", "")
 	if err != nil {
-		return log.Printf("创建滴答清单客户端失败: %v", err)
+		return fmt.Errorf("创建滴答清单客户端失败: %v", err)
 	}
 
 	// 获取任务数据
@@ -353,33 +353,33 @@ func exportDida365() error {
 
 	// 导出项目任务
 	if err := exporter.ExportProjectTasks(); err != nil {
-		return log.Printf("导出项目任务失败: %v", err)
+		return fmt.Errorf("导出项目任务失败: %v", err)
 	}
 
 	// 导出笔记
 	if err := exporter.ExportNotes(); err != nil {
-		return log.Printf("导出笔记失败: %v", err)
+		return fmt.Errorf("导出笔记失败: %v", err)
 	}
 
 	// 导出分组
 	if err := exporter.ExportColumns(); err != nil {
-		return log.Printf("导出分组失败: %v", err)
+		return fmt.Errorf("导出分组失败: %v", err)
 	}
 
 	// 导出每日摘要
 	today := time.Now()
 	if err := exporter.ExportDailySummary(today, habits, checkins, todayStamp); err != nil {
-		return log.Printf("导出每日摘要失败: %v", err)
+		return fmt.Errorf("导出每日摘要失败: %v", err)
 	}
 
 	// 导出每周摘要
 	if err := exporter.ExportWeeklySummary(today); err != nil {
-		return log.Printf("导出每周摘要失败: %v", err)
+		return fmt.Errorf("导出每周摘要失败: %v", err)
 	}
 
 	// 导出每月摘要
 	if err := exporter.ExportMonthlySummary(today); err != nil {
-		return log.Printf("导出每月摘要失败: %v", err)
+		return fmt.Errorf("导出每月摘要失败: %v", err)
 	}
 
 	log.Printf("滴答清单数据导出完成")
@@ -401,13 +401,13 @@ func exportMemos() error {
 	// 创建Memos客户端
 	client, err := client.NewMemosClient(memosAPI, memosToken)
 	if err != nil {
-		return log.Printf("创建Memos客户端失败: %v", err)
+		return fmt.Errorf("创建Memos客户端失败: %v", err)
 	}
 
 	// 获取Memos记录
 	records, err := client.FetchMemos(10, 0, "NORMAL")
 	if err != nil {
-		return log.Printf("获取Memos记录失败: %v", err)
+		return fmt.Errorf("获取Memos记录失败: %v", err)
 	}
 
 	log.Printf("获取到 %d 条Memos记录\n", len(records))
@@ -419,7 +419,7 @@ func exportMemos() error {
 	// 导出每日摘要
 	today := time.Now()
 	if err := exporter.ExportDailyMemos(today); err != nil {
-		return log.Printf("导出Memos每日摘要失败: %v", err)
+		return fmt.Errorf("导出Memos每日摘要失败: %v", err)
 	}
 
 	log.Printf("Memos数据导出完成")
