@@ -42,7 +42,7 @@ func getProjectColumns(client *client.Dida365Client, projectID string) ([]types.
 	// 获取项目列数据
 	columns, err := client.GetProjectColumns(projectID)
 	if err != nil {
-		fmt.Printf("获取项目 %s 列信息失败: %v\n", projectID, err)
+		log.Printf("获取项目 %s 列信息失败: %v\n", projectID, err)
 		return nil, err
 	}
 
@@ -96,7 +96,7 @@ func getProjectColumns(client *client.Dida365Client, projectID string) ([]types.
 
 // getTasks 获取任务数据
 func getTasks(client *client.Dida365Client) ([]types.Project, []types.Task, []types.Task, []types.Project, []types.Task, []types.Column, error) {
-	fmt.Println("正在获取滴答清单数据...")
+	log.Printf("正在获取滴答清单数据...")
 
 	// 获取所有数据
 	allData, err := client.GetAllData()
@@ -184,7 +184,7 @@ func getTasks(client *client.Dida365Client) ([]types.Project, []types.Task, []ty
 		50,
 	)
 	if err != nil {
-		fmt.Printf("获取已完成任务失败: %v\n", err)
+		log.Printf("获取已完成任务失败: %v\n", err)
 		completedTasks = []types.Task{}
 	}
 
@@ -192,7 +192,7 @@ func getTasks(client *client.Dida365Client) ([]types.Project, []types.Task, []ty
 	preprocessTasks(todoTasks)
 	preprocessTasks(completedTasks)
 
-	fmt.Printf("获取到 %d 个项目，%d 个待办任务，%d 个已完成任务，%d 个笔记项目，%d 个笔记, %d 个分组\n",
+	log.Printf("获取到 %d 个项目，%d 个待办任务，%d 个已完成任务，%d 个笔记项目，%d 个笔记, %d 个分组\n",
 		len(projects), len(todoTasks), len(completedTasks), len(note_projects), len(notes), len(all_columns))
 
 	return projects, todoTasks, completedTasks, note_projects, notes, all_columns, nil
@@ -285,12 +285,12 @@ func parseTaskFromMap(taskMap map[string]interface{}) types.Task {
 
 // getHabits 获取习惯数据
 func getHabits(client *client.Dida365Client) ([]types.Habit, *types.HabitCheckinsResponse, int, error) {
-	fmt.Println("正在获取习惯数据...")
+	log.Printf("正在获取习惯数据...")
 
 	// 获取习惯列表
 	habits_data, err := client.GetHabits()
 	if err != nil {
-		fmt.Printf("获取习惯列表失败: %v\n", err)
+		log.Printf("获取习惯列表失败: %v\n", err)
 		return []types.Habit{}, nil, 0, nil
 	}
 	var habits = []types.Habit{}
@@ -304,7 +304,7 @@ func getHabits(client *client.Dida365Client) ([]types.Habit, *types.HabitCheckin
 	todayStamp := utils.GetTodayStamp()
 
 	if len(habits) == 0 {
-		fmt.Printf("没有习惯打卡记录\n")
+		log.Printf("没有习惯打卡记录\n")
 		return []types.Habit{}, &types.HabitCheckinsResponse{}, todayStamp, nil
 	}
 
@@ -319,11 +319,11 @@ func getHabits(client *client.Dida365Client) ([]types.Habit, *types.HabitCheckin
 
 	checkins, err := client.GetHabitsCheckins(afterStamp, habitIDs)
 	if err != nil {
-		fmt.Printf("获取习惯打卡失败: %v\n", err)
+		log.Printf("获取习惯打卡失败: %v\n", err)
 		checkins = &types.HabitCheckinsResponse{}
 	}
 
-	fmt.Printf("获取到 %d 个习惯\n", len(habits))
+	log.Printf("获取到 %d 个习惯\n", len(habits))
 	return habits, checkins, todayStamp, nil
 }
 
@@ -332,7 +332,7 @@ func exportDida365() error {
 	// 创建滴答清单客户端
 	client, err := client.NewDida365Client("", "")
 	if err != nil {
-		return fmt.Errorf("创建滴答清单客户端失败: %v", err)
+		return log.Printf("创建滴答清单客户端失败: %v", err)
 	}
 
 	// 获取任务数据
@@ -353,36 +353,36 @@ func exportDida365() error {
 
 	// 导出项目任务
 	if err := exporter.ExportProjectTasks(); err != nil {
-		return fmt.Errorf("导出项目任务失败: %v", err)
+		return log.Printf("导出项目任务失败: %v", err)
 	}
 
 	// 导出笔记
 	if err := exporter.ExportNotes(); err != nil {
-		return fmt.Errorf("导出笔记失败: %v", err)
+		return log.Printf("导出笔记失败: %v", err)
 	}
 
 	// 导出分组
 	if err := exporter.ExportColumns(); err != nil {
-		return fmt.Errorf("导出分组失败: %v", err)
+		return log.Printf("导出分组失败: %v", err)
 	}
 
 	// 导出每日摘要
 	today := time.Now()
 	if err := exporter.ExportDailySummary(today, habits, checkins, todayStamp); err != nil {
-		return fmt.Errorf("导出每日摘要失败: %v", err)
+		return log.Printf("导出每日摘要失败: %v", err)
 	}
 
 	// 导出每周摘要
 	if err := exporter.ExportWeeklySummary(today); err != nil {
-		return fmt.Errorf("导出每周摘要失败: %v", err)
+		return log.Printf("导出每周摘要失败: %v", err)
 	}
 
 	// 导出每月摘要
 	if err := exporter.ExportMonthlySummary(today); err != nil {
-		return fmt.Errorf("导出每月摘要失败: %v", err)
+		return log.Printf("导出每月摘要失败: %v", err)
 	}
 
-	fmt.Println("滴答清单数据导出完成")
+	log.Printf("滴答清单数据导出完成")
 	return nil
 }
 
@@ -392,25 +392,25 @@ func exportMemos() error {
 	memosAPI := os.Getenv("MEMOS_API")
 	memosToken := os.Getenv("MEMOS_TOKEN")
 	if memosAPI == "" || memosToken == "" {
-		fmt.Println("未配置Memos API，跳过Memos导出")
+		log.Printf("未配置Memos API，跳过Memos导出")
 		return nil
 	}
 
-	fmt.Println("正在导出Memos数据...")
+	log.Printf("正在导出Memos数据...")
 
 	// 创建Memos客户端
 	client, err := client.NewMemosClient(memosAPI, memosToken)
 	if err != nil {
-		return fmt.Errorf("创建Memos客户端失败: %v", err)
+		return log.Printf("创建Memos客户端失败: %v", err)
 	}
 
 	// 获取Memos记录
 	records, err := client.FetchMemos(10, 0, "NORMAL")
 	if err != nil {
-		return fmt.Errorf("获取Memos记录失败: %v", err)
+		return log.Printf("获取Memos记录失败: %v", err)
 	}
 
-	fmt.Printf("获取到 %d 条Memos记录\n", len(records))
+	log.Printf("获取到 %d 条Memos记录\n", len(records))
 
 	// 创建导出器
 	outputDir := utils.GetEnvOrDefault("OUTPUT_DIR", ".")
@@ -419,16 +419,36 @@ func exportMemos() error {
 	// 导出每日摘要
 	today := time.Now()
 	if err := exporter.ExportDailyMemos(today); err != nil {
-		return fmt.Errorf("导出Memos每日摘要失败: %v", err)
+		return log.Printf("导出Memos每日摘要失败: %v", err)
 	}
 
-	fmt.Println("Memos数据导出完成")
+	log.Printf("Memos数据导出完成")
 	return nil
+}
+
+func removeConflictFiles() {
+	searchPath := utils.GetEnvOrDefault("OUTPUT_DIR", ".")
+	keyword = "sync-conflict"
+
+	_ = filepath.WalkDir(searchPath, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() && d.Name() == ".stversions" {
+			return filepath.SkipDir
+		}
+		if !d.IsDir() && strings.Contains(d.Name(), keyword) {
+			_ = os.Remove(path)
+		}
+		return nil
+	})
+
+	log.Printf("已删除冲突文件")
 }
 
 // runExport 执行一次数据导出
 func runExport() {
-	fmt.Println("开始导出数据...")
+	log.Printf("开始导出数据...")
 
 	// 导出滴答清单数据
 	if err := exportDida365(); err != nil {
@@ -440,15 +460,14 @@ func runExport() {
 		log.Printf("导出Memos数据失败: %v", err)
 	}
 
-	fmt.Println("数据导出完成")
+	log.Printf("数据导出完成")
+
+	removeConflictFiles()
 }
 
 func main() {
 	// 加载环境变量
 	godotenv.Load()
-
-	fmt.Println("当前时区:", time.Local.String()) // 应输出 CST
-    fmt.Println("当前时间:", time.Now())
 
 	// 创建定时器，每5分钟触发一次
 	ticker := time.NewTicker(5 * time.Minute)

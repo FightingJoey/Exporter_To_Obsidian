@@ -82,7 +82,7 @@ func (e *MemosExporter) ExportDailyMemos(date time.Time) error {
 			content += e.formatMemosRecord(record)
 		}
 	} else {
-		return fmt.Errorf("写入每日Memos摘要失败: 今日没有Memos记录")
+		return fmt.Errorf("今日没有Memos记录")
 	}
 
 	// 写入文件
