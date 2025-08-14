@@ -171,6 +171,13 @@ func (e *Dida365Exporter) createColumnMarkdown(column types.Column) error {
 	write("modified_time", utils.FormatTime(*column.ModifiedTime, "2006-01-02 15:04:05"))
 	content := utils.GetFrontMatter([]string{"fullwidth", "noyaml"}, frontMatter)
 
+	for _, project := range e.projects {
+		if *column.ProjectID == project.ID {
+			content += fmt.Sprintf("# %s —— %s\n\n", project.Name, *column.Name)
+			break
+		}
+	}
+
 	content += "```dataviewjs\n" +
 		"dv.view('dida365TaskTable', {\n" +
 		"    folderPath: '9.Archive/Dida365/Tasks',\n" +
