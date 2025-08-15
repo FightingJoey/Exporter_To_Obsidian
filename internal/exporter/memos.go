@@ -117,12 +117,12 @@ func (e *MemosExporter) formatMemosRecord(record types.MemosRecord) string {
 	// 添加时间戳
 	if record.CreatedTs != nil {
 		recordTime := time.Unix(*record.CreatedTs, 0)
-		content.WriteString(fmt.Sprintf("**%s**\n\n", recordTime.Format("15:04:05")))
+		content.WriteString(fmt.Sprintf("- **%s**\n\n", recordTime.Format("15:04:05")))
 	}
 
 	// 添加内容
 	if record.Content != nil {
-		content.WriteString(*record.Content)
+		content.WriteString(fmt.Sprintf("\t%s", *record.Content))
 		content.WriteString("\n\n")
 	}
 
