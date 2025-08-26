@@ -442,6 +442,9 @@ func (e *Dida365Exporter) buildTaskFrontMatter(task types.Task) string {
 	if task.CompletedTime != nil {
 		write("completed_time", utils.FormatTime(*task.CompletedTime, "2006-01-02 15:04:05"))
 	}
+	if task.RepeatFlag != nil {
+		write("repeat_flag", *task.RepeatFlag)
+	}
 	content := utils.GetFrontMatter([]string{"noyaml"}, frontMatter)
 	content += fmt.Sprintf("# %s\n\n", *task.Title)
 	return content
