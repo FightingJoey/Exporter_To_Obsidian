@@ -249,6 +249,10 @@ func parseTaskFromMap(taskMap map[string]interface{}) types.Task {
 	if columnID, ok := taskMap["columnId"].(string); ok {
 		task.ColumnID = &columnID
 	}
+	if repeatFlag, ok := taskMap["repeatFlag"].(string); ok {
+		task.RepeatFlag = &repeatFlag
+		fmt.Printf("repeat_flag: %s\n", repeatFlag)
+	}
 
 	// 解析任务项
 	if items, ok := taskMap["items"].([]interface{}); ok {
