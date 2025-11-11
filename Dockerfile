@@ -27,8 +27,15 @@ FROM scratch
 WORKDIR /app
 
 # 从构建阶段复制二进制文件
-COPY --from=builder /app/main .
-COPY --from=builder /app/output /output
+# COPY --from=builder /app/main .
+# COPY --from=builder /app/output /output
+
+# 复制文件并立即把属主/属组改成 1000:1000
+COPY --from=builder --chown=1000:1000 /app/main .
+COPY --from=builder --chown=1000:1000 /app/output /output
+
+# 指定运行时用户/组（只能是数字）
+USER 1000:1000
 
 # 复制时区信息
 COPY ./usr/share/zoneinfo /usr/share/zoneinfo
