@@ -34,6 +34,9 @@ WORKDIR /app
 COPY --from=builder --chown=1000:1000 /app/main .
 COPY --from=builder --chown=1000:1000 /app/output /output
 
+# 复制.env文件并设置正确的权限
+COPY --chown=1000:1000 .env .env
+
 # 指定运行时用户/组（只能是数字）
 USER 1000:1000
 

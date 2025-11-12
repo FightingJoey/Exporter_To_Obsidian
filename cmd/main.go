@@ -251,7 +251,7 @@ func parseTaskFromMap(taskMap map[string]interface{}) types.Task {
 	}
 	if repeatFlag, ok := taskMap["repeatFlag"].(string); ok {
 		task.RepeatFlag = &repeatFlag
-		fmt.Printf("repeat_flag: %s\n", repeatFlag)
+		// fmt.Printf("repeat_flag: %s\n", repeatFlag)
 	}
 
 	// 解析任务项
