@@ -50,8 +50,8 @@ func NewDida365Client(username, password string) (*Dida365Client, error) {
 
 	// 设置默认请求头
 	client.client.SetHeaders(map[string]string{
-		"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-		"x-device":   `{"platform":"web","os":"Windows 10","device":"Chrome 136.0.0.0","name":"","version":6246,"id":"66c5c4f4efae8477e84eb688","channel":"website","campaign":"","websocket":"67e7de9bf92b296c741567e0"}`,
+		"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+		"x-device":   `{"platform":"web","os":"Windows 11","device":"Chrome 131.0.0.0","name":"","version":6246,"id":"674ea3c2a4f37a3f2c9b42d8","channel":"website","campaign":"","websocket":"67e7de9bf92b296c741567e0"}`,
 	})
 
 	// 尝试从环境变量加载token和上次登录时间
